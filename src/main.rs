@@ -1,9 +1,10 @@
 mod chip8;
+mod display;
 
 use chip8::Chip8;
 
 fn main() {
-    let chip = Chip8::new();
+    let mut chip = Chip8::new();
 
-    println!("{:?}", chip);
+    chip.run();
 }
