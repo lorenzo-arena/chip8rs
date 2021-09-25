@@ -3,3 +3,6 @@
 
 # Ignore ROMs used for testing
 *.ch8
+
+# Ignore log file
+*.log
