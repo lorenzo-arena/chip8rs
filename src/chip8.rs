@@ -3,11 +3,13 @@ use crate::display::Display;
 use crate::display::NCursesDisplay;
 use crate::fonts::Fonts;
 
-use std::{thread, time};
+use std::{thread, time, fs};
 
 const MEMORY_SIZE: usize = 4096;
 const STACK_SIZE: usize = 100;
 const REGISTERS_SIZE: usize = 16;
+const FONT_START: usize = 0x50;
+const ROM_START: usize = 0x200;
 
 /* TODO : restore debug trait */
 /* TODO : use arrays instead of vecs? */
@@ -39,7 +41,7 @@ impl Chip8 {
     }
 
     fn load_fonts(& mut self) {
-        let mut dest = 0x50;
+        let mut dest = FONT_START;
 
         for font in self.fonts.fonts {
             self.memory[dest..(dest + font.len())].copy_from_slice(&font);
@@ -47,8 +49,25 @@ impl Chip8 {
         }
     }
 
-    pub fn run(& mut self) {
+    fn load_rom(& mut self, rom_path: &str) {
+        let file_content = fs::read(rom_path).unwrap();
+
+        if file_content.len() > (MEMORY_SIZE - ROM_START) {
+            panic!("ROM content is too large");
+        }
+
+        let dest = ROM_START;
+        self.memory[dest..(dest + file_content.len())].copy_from_slice(&file_content);
+    }
+
+    pub fn run(& mut self, rom_path: &str) {
         self.load_fonts();
+        self.load_rom(rom_path);
+
+        /* TODO: Used to debug memory content, to remove */
+        //println!("{:x?}", self.memory);
+        //loop {}
+
         self.display.open();
 
         let mut y = 0;

@@ -1,1 +1,5 @@
+# Ignore build folder
 /target
+
+# Ignore ROMs used for testing
+*.ch8
