@@ -1,6 +1,6 @@
+use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
-use std::fs;
 use std::io::prelude::*;
 
 pub trait Logger {
@@ -8,7 +8,7 @@ pub trait Logger {
 }
 
 pub struct FileLogger {
-    file_path: String
+    file_path: String,
 }
 
 impl FileLogger {
@@ -17,7 +17,7 @@ impl FileLogger {
         let _ = fs::remove_file(&file_path);
 
         FileLogger {
-            file_path: file_path
+            file_path: file_path,
         }
     }
 }

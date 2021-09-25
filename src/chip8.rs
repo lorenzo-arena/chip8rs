@@ -2,10 +2,10 @@
 use crate::display::Display;
 use crate::display::NCursesDisplay;
 use crate::fonts::Fonts;
-use crate::logger::Logger;
 use crate::logger::FileLogger;
+use crate::logger::Logger;
 
-use std::{thread, time, fs};
+use std::{fs, thread, time};
 
 const MEMORY_SIZE: usize = 4096;
 const STACK_SIZE: usize = 100;
@@ -49,7 +49,7 @@ impl Chip8 {
         }
     }
 
-    fn load_fonts(& mut self) {
+    fn load_fonts(&mut self) {
         let mut dest = FONT_START as usize;
 
         for font in self.fonts.fonts {
@@ -58,7 +58,7 @@ impl Chip8 {
         }
     }
 
-    fn load_rom(& mut self, rom_path: &str) {
+    fn load_rom(&mut self, rom_path: &str) {
         let file_content = fs::read(rom_path).unwrap();
 
         if file_content.len() > (MEMORY_SIZE - ROM_START as usize) {
@@ -69,7 +69,7 @@ impl Chip8 {
         self.memory[dest..(dest + file_content.len())].copy_from_slice(&file_content);
     }
 
-    fn fetch(& mut self) -> u16 {
+    fn fetch(&mut self) -> u16 {
         let first = self.memory[self.pc as usize] as u16;
         let second = self.memory[(self.pc + 1) as usize] as u16;
 
@@ -78,7 +78,7 @@ impl Chip8 {
         (first << 8) | second
     }
 
-    fn execute(& mut self, instr: u16) {
+    fn execute(&mut self, instr: u16) {
         if (instr & 0xF000) == 0x0000 {
             if instr == 0x00E0 {
                 /* 00E0: clear screen instruction, turn all pixels off */
@@ -115,7 +115,7 @@ impl Chip8 {
     }
 
     /* TODO : this should be moved to another entity */
-    fn draw_sprite(& mut self, instr: u16) {
+    fn draw_sprite(&mut self, instr: u16) {
         /* Get X and Y coordinates from the registers */
         let x = (instr & 0x0F00) >> 8;
         let x = self.regs[x as usize] % (DISPLAY_WIDTH as u8);
@@ -127,7 +127,10 @@ impl Chip8 {
 
         let n = (instr & 0x000F) as u8;
 
-        self.logger.log(format!("Drawing sprite from coordinates {}:{}, size {}", x, y, n));
+        self.logger.log(format!(
+            "Drawing sprite from coordinates {}:{}, size {}",
+            x, y, n
+        ));
 
         for sprite_row in 0..n {
             let y_pos = (y + sprite_row) as usize;
@@ -142,16 +145,17 @@ impl Chip8 {
                         let bit_index = 7 - sprite_bit_i;
                         let bit_value = (sprite_data & (0x1 << bit_index)) >> bit_index;
                         let led_status = self.display.is_on(x_pos, y_pos);
-                        
+
                         /* If current pixel is on and bit is high, flip the led */
                         if (bit_value != 0) && led_status {
                             self.display.led_off(x_pos, y_pos);
                             self.display.refresh();
-                            
+
                             /* Set VF to 1 since a led has been changed */
                             self.regs[0x0F as usize] = 1;
                         } else if (bit_value != 0) && !led_status {
-                            self.logger.log(format!("Turning ON led {}:{}", x_pos, y_pos));
+                            self.logger
+                                .log(format!("Turning ON led {}:{}", x_pos, y_pos));
                             self.display.led_on(x_pos, y_pos);
                             self.display.refresh();
                         }
@@ -165,7 +169,7 @@ impl Chip8 {
         }
     }
 
-    pub fn run(& mut self, rom_path: &str) {
+    pub fn run(&mut self, rom_path: &str) {
         self.load_fonts();
         self.load_rom(rom_path);
 

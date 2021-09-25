@@ -6,16 +6,16 @@ pub trait Display {
     fn open(&self);
     fn close(&self);
     fn refresh(&self);
-    fn led_on(& mut self, x: usize, y: usize);
-    fn led_off(& mut self, x: usize, y: usize);
-    fn clear_screen(& mut self, on: bool);
-    fn is_on(& self, x: usize, y: usize) -> bool;
+    fn led_on(&mut self, x: usize, y: usize);
+    fn led_off(&mut self, x: usize, y: usize);
+    fn clear_screen(&mut self, on: bool);
+    fn is_on(&self, x: usize, y: usize) -> bool;
 }
 
 pub struct NCursesDisplay {
     x_len: usize,
     y_len: usize,
-    display_string: String
+    display_string: String,
 }
 
 impl NCursesDisplay {
@@ -29,7 +29,7 @@ impl NCursesDisplay {
                 display_string.push_str(if on { "#" } else { " " });
                 x += 1;
             }
-    
+
             display_string.push_str("\n");
             y += 1;
         }
@@ -37,7 +37,7 @@ impl NCursesDisplay {
         NCursesDisplay {
             x_len: x_len,
             y_len: y_len,
-            display_string: display_string
+            display_string: display_string,
         }
     }
 
@@ -77,19 +77,19 @@ impl Display for NCursesDisplay {
         endwin();
     }
 
-    fn led_on(& mut self, x: usize, y: usize) {
+    fn led_on(&mut self, x: usize, y: usize) {
         /* TODO : better result management? */
         let pos = self.get_pos(x, y).unwrap();
         self.display_string.replace_range(pos..(pos + 1), "#");
     }
 
-    fn led_off(& mut self, x: usize, y: usize) {
+    fn led_off(&mut self, x: usize, y: usize) {
         /* TODO : better result management? */
         let pos = self.get_pos(x, y).unwrap();
         self.display_string.replace_range(pos..(pos + 1), " ");
     }
 
-    fn clear_screen(& mut self, on: bool) {
+    fn clear_screen(&mut self, on: bool) {
         let mut y = 0;
 
         self.display_string.clear();
@@ -100,13 +100,13 @@ impl Display for NCursesDisplay {
                 self.display_string.push_str(if on { "#" } else { " " });
                 x += 1;
             }
-    
+
             self.display_string.push_str("\n");
             y += 1;
         }
     }
 
-    fn is_on(& self, x: usize, y: usize) -> bool {
+    fn is_on(&self, x: usize, y: usize) -> bool {
         /* TODO : better result management? */
         let pos = self.get_pos(x, y).unwrap();
         self.display_string.chars().nth(pos).unwrap() == '#'
