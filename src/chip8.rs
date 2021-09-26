@@ -79,38 +79,51 @@ impl Chip8 {
     }
 
     fn execute(&mut self, instr: u16) {
-        if (instr & 0xF000) == 0x0000 {
-            if instr == 0x00E0 {
-                /* 00E0: clear screen instruction, turn all pixels off */
-                self.display.clear_screen(false);
-                self.display.refresh();
-            } else if instr == 0x00EE {
-                /* 00EE: return from subroutine, pop the PC */
-                self.pc = self.stack.pop().unwrap();
+        match instr & 0xF000 {
+            0x0000 => {
+                if instr == 0x00E0 {
+                    /* 00E0: clear screen instruction, turn all pixels off */
+                    self.display.clear_screen(false);
+                    self.display.refresh();
+                } else if instr == 0x00EE {
+                    /* 00EE: return from subroutine, pop the PC */
+                    self.pc = self.stack.pop().unwrap();
+                } else {
+                    panic!("Unknown instruction found: {:X?}", instr);
+                }
+            },
+            0x1000 => {
+                /* 1NNN: jump, set the PC to NNN */
+                self.pc = instr & 0x0FFF;
+            },
+            0x2000 => {
+                /* 2NNN: call subroutine, push the PC and set the PC to NNN */
+                self.stack.push(self.pc);
+                self.pc = instr & 0x0FFF;
+            },
+            0x6000 => {
+                /* 6XNN: set register X to value NN */
+                let reg = (instr & 0x0F00) >> 8;
+                self.regs[reg as usize] = (instr & 0x00FF) as u8;
+            },
+            0x7000 => {
+                /* 7XNN: add value to register X; this can overflow, so a helper variable is used */
+                let reg = (instr & 0x0F00) >> 8;
+                let mut curr_reg = self.regs[reg as usize] as u16;
+                curr_reg += (instr & 0x00FF) as u16;
+                self.regs[reg as usize] = (curr_reg & 0x00FF) as u8;
+            },
+            0xA000 => {
+                /* ANNN: set index to value NNN */
+                self.i = instr & 0x0FFF;
+            },
+            0xD000 => {
+                /* DXYN: display */
+                self.draw_sprite(instr & 0x0FFF);
             }
-        } else if (instr & 0xF000) == 0x1000 {
-            /* 1NNN: jump, set the PC to NNN */
-            self.pc = instr & 0x0FFF;
-        } else if (instr & 0xF000) == 0x2000 {
-            /* 2NNN: call subroutine, push the PC and set the PC to NNN */
-            self.stack.push(self.pc);
-            self.pc = instr & 0x0FFF;
-        } else if (instr & 0xF000) == 0x6000 {
-            /* 6XNN: set register X to value NN */
-            let reg = (instr & 0x0F00) >> 8;
-            self.regs[reg as usize] = (instr & 0x00FF) as u8;
-        } else if (instr & 0xF000) == 0x7000 {
-            /* 7XNN: add value to register X; this can overflow, so a helper variable is used */
-            let reg = (instr & 0x0F00) >> 8;
-            let mut curr_reg = self.regs[reg as usize] as u16;
-            curr_reg += (instr & 0x00FF) as u16;
-            self.regs[reg as usize] = (curr_reg & 0x00FF) as u8;
-        } else if (instr & 0xF000) == 0xA000 {
-            /* ANNN: set index to value NNN */
-            self.i = instr & 0x0FFF;
-        } else if (instr & 0xF000) == 0xD000 {
-            /* DXYN: display */
-            self.draw_sprite(instr & 0x0FFF);
+            _ => {
+                panic!("Unknown instruction found: {:X?}", instr);
+            }
         }
     }
 
