@@ -1,6 +1,6 @@
 /* TODO : restore debug trait */
-const FONT_SIZE: usize = 5;
-const FONTS_SIZE: usize = 16;
+pub const FONT_SIZE: usize = 5;
+pub const FONTS_SIZE: usize = 16;
 
 pub struct Fonts {
     pub fonts: [[u8; FONT_SIZE]; FONTS_SIZE],
