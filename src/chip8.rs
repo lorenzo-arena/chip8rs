@@ -5,6 +5,7 @@ use crate::fonts::Fonts;
 use crate::logger::FileLogger;
 use crate::logger::Logger;
 
+use rand::Rng;
 use std::{fs, thread, time};
 
 const MEMORY_SIZE: usize = 4096;
@@ -101,6 +102,39 @@ impl Chip8 {
                 self.stack.push(self.pc);
                 self.pc = instr & 0x0FFF;
             },
+            0x3000 => {
+                /* 3XNN: skip one instruction if VX content is equal to NN */
+                let reg = (instr & 0x0F00) >> 8;
+                let value = (instr & 0x00FF) as u8;
+                let reg_value = self.regs[reg as usize];
+
+                if value == reg_value {
+                    self.pc += 2;
+                }
+            },
+            0x4000 => {
+                /* 4XNN: skip one instruction if VX content is NOT equal to NN */
+                let reg = (instr & 0x0F00) >> 8;
+                let value = (instr & 0x00FF) as u8;
+                let reg_value = self.regs[reg as usize];
+
+                if value != reg_value {
+                    self.pc += 2;
+                }
+            }
+            0x5000 => {
+                /* 5XY0: skip one instruction if VX and VY values are equal */
+                if (instr & 0xF00F) == 0x5000 {
+                    let reg_x = (instr & 0x0F00) >> 8;
+                    let reg_y = (instr & 0x00F0) >> 4;
+
+                    if self.regs[reg_x as usize] == self.regs[reg_y as usize] {
+                        self.pc += 2;
+                    }
+                } else {
+                    panic!("Unknown instruction found: {:X?}", instr);
+                }
+            }
             0x6000 => {
                 /* 6XNN: set register X to value NN */
                 let reg = (instr & 0x0F00) >> 8;
@@ -109,20 +143,159 @@ impl Chip8 {
             0x7000 => {
                 /* 7XNN: add value to register X; this can overflow, so a helper variable is used */
                 let reg = (instr & 0x0F00) >> 8;
-                let mut curr_reg = self.regs[reg as usize] as u16;
-                curr_reg += (instr & 0x00FF) as u16;
-                self.regs[reg as usize] = (curr_reg & 0x00FF) as u8;
+                let mut add_value = self.regs[reg as usize] as u16;
+                add_value += (instr & 0x00FF) as u16;
+                self.regs[reg as usize] = (add_value & 0x00FF) as u8;
             },
+            0x8000 => {
+                /* Process logical instruction */
+                self.logical_instruction(instr);
+            },
+            0x9000 => {
+                /* 9XY0: skip one instruction if VX and VY values are NOT equal */
+                if (instr & 0xF00F) == 0x9000 {
+                    let reg_x = (instr & 0x0F00) >> 8;
+                    let reg_y = (instr & 0x00F0) >> 4;
+
+                    if self.regs[reg_x as usize] != self.regs[reg_y as usize] {
+                        self.pc += 2;
+                    }
+                } else {
+                    panic!("Unknown skip instruction found: {:X?}", instr);
+                }
+            }
             0xA000 => {
                 /* ANNN: set index to value NNN */
                 self.i = instr & 0x0FFF;
             },
+            0xB000 => {
+                /* TODO : this should be made configurable, as some implementations interpret this like a "BXNN" */
+                /* BNNN: JUMP, set PC to NNN plus the value of V0 */
+                self.pc = (instr & 0x0FFF) + (self.regs[0x00 as usize] as u16);
+            },
+            0xC000 => {
+                /* CXNN: RANDOM, generate a random number, binary AND with NN and set the result in VX */
+                let mut rng = rand::thread_rng();
+                let random: u8 = rng.gen();
+                let reg = (instr & 0x0F00) >> 8;
+
+                self.regs[reg as usize] = random & ((instr & 0x00FF) as u8);
+            },
             0xD000 => {
                 /* DXYN: display */
                 self.draw_sprite(instr & 0x0FFF);
+            },
+            0xE000 => {
+                if (instr & 0xF0FF) == 0xE09E {
+                    panic!("Unknown keypad skip instruction found: {:X?}", instr);
+                } else if (instr & 0xF0FF) == 0xE0A1 {
+                    panic!("Unknown keypad skip instruction found: {:X?}", instr);
+                } else {
+                    panic!("Unknown keypad skip instruction found: {:X?}", instr);
+                }
             }
             _ => {
                 panic!("Unknown instruction found: {:X?}", instr);
+            }
+        }
+    }
+
+    fn logical_instruction(&mut self, instr: u16) {
+        let reg_x = (instr & 0x0F00) >> 8;
+        let reg_y = (instr & 0x00F0) >> 4;
+
+        match instr & 0xF00F {
+            0x8000 => {
+                /* 8XY0: set instruction; copy VY to VX */
+                self.regs[reg_x as usize] = self.regs[reg_y as usize];
+            },
+            0x8001 => {
+                /* 8XY1: binary OR, set VX to the OR of VX and VY */
+                self.regs[reg_x as usize] = self.regs[reg_x as usize] | self.regs[reg_y as usize];
+            },
+            0x8002 => {
+                /* 8XY2: binary AND, set VX to the AND of VX and VY */
+                self.regs[reg_x as usize] = self.regs[reg_x as usize] & self.regs[reg_y as usize];
+            },
+            0x8003 => {
+                /* 8XY3: binary XOR, set VX to the XOR of VX and VY */
+                self.regs[reg_x as usize] = self.regs[reg_x as usize] ^ self.regs[reg_y as usize];
+            },
+            0x8004 => {
+                /* 8XY4: ADD, VX is set to the value of VX plus VY; if overflow occurs, set the flag register */
+                let mut add_value = (self.regs[reg_x as usize] as u16) + self.regs[reg_y as usize] as u16;
+
+                if add_value > 0xFF {
+                    /* Overflow occurred, set the flag register */
+                    self.regs[0x0F as usize] = 1;
+                } else {
+                    self.regs[0x0F as usize] = 0;
+                }
+
+                self.regs[reg_x as usize] = (add_value & 0x00FF) as u8;
+            },
+            0x8005 => {
+                /* 8XY5: SUBTRACT, VX is set to the value of VX minus VY;
+                 * in this case, the flag register is set if the first operand is larger than the second operand */
+
+                if self.regs[reg_x as usize] >= self.regs[reg_y as usize] {
+                    self.regs[0x0F as usize] = 1;
+                    self.regs[reg_x as usize] = self.regs[reg_x as usize] - self.regs[reg_y as usize];
+                } else {
+                    self.regs[0x0F as usize] = 0;
+                    /* Since the operation would underflow, let's multiply by -1 by swapping the operands */
+                    self.regs[reg_x as usize] = self.regs[reg_y as usize] - self.regs[reg_x as usize];
+                }
+            },
+            0x8006 => {
+                /* TODO : is this a circular shift or not? */
+                /* 8XY6: SHIFT; shift VX one bit to the right */
+
+                /* TODO: this should be made optional, since some implementation (like CHIP-48 or SUPER-CHIP)
+                 * did not apply this instruction */
+                self.regs[reg_x as usize] = self.regs[reg_y as usize];
+
+                /* Set the flag register to 1 if the shifted bit was 1 */
+                if (self.regs[reg_x as usize] & 0x01) == 0x01 {
+                    self.regs[0x0F as usize] = 1;
+                } else {
+                    self.regs[0x0F as usize] = 0;
+                }
+
+                self.regs[reg_x as usize] = self.regs[reg_x as usize] >> 1;
+            }
+            0x8007 => {
+                /* 8XY7: SUBTRACT, VX is set to the value of VY minus VX;
+                 * in this case, the flag register is set if the first operand is larger than the second operand */
+
+                if self.regs[reg_y as usize] >= self.regs[reg_x as usize] {
+                    self.regs[0x0F as usize] = 1;
+                    self.regs[reg_x as usize] = self.regs[reg_y as usize] - self.regs[reg_x as usize];
+                } else {
+                    self.regs[0x0F as usize] = 0;
+                    /* Since the operation would underflow, let's multiply by -1 by swapping the operands */
+                    self.regs[reg_x as usize] = self.regs[reg_x as usize] - self.regs[reg_y as usize];
+                }
+            },
+            0x800E => {
+                /* TODO : is this a circular shift or not? */
+                /* 8XYE: SHIFT; shift VX one bit to the left */
+
+                /* TODO: this should be made optional, since some implementation (like CHIP-48 or SUPER-CHIP)
+                 * did not apply this instruction */
+                 self.regs[reg_x as usize] = self.regs[reg_y as usize];
+
+                 /* Set the flag register to 1 if the shifted bit was 1 */
+                 if (self.regs[reg_x as usize] & 0x01) == 0x01 {
+                     self.regs[0x0F as usize] = 1;
+                 } else {
+                     self.regs[0x0F as usize] = 0;
+                 }
+ 
+                 self.regs[reg_x as usize] = self.regs[reg_x as usize] << 1;
+            },
+            _ => {
+                panic!("Unknown logical instruction found: {:X?}", instr);
             }
         }
     }
