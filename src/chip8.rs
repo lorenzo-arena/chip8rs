@@ -223,7 +223,7 @@ impl Chip8 {
             },
             0x8004 => {
                 /* 8XY4: ADD, VX is set to the value of VX plus VY; if overflow occurs, set the flag register */
-                let mut add_value = (self.regs[reg_x as usize] as u16) + self.regs[reg_y as usize] as u16;
+                let add_value = (self.regs[reg_x as usize] as u16) + self.regs[reg_y as usize] as u16;
 
                 if add_value > 0xFF {
                     /* Overflow occurred, set the flag register */
