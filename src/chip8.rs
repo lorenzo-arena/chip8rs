@@ -210,9 +210,14 @@ impl Chip8 {
                 let reg = (instr & 0x0F00) >> 8;
                 let mut reg_value = self.regs[reg as usize];
 
-                self.memory[(self.i + 0) as usize] = reg_value % 10;
+                /* For example, if the value was "156" ->
+                   memory[i] = 1
+                   memory[i + 1] = 5
+                   memory[i + 2] = 6
+                 */
+                self.memory[(self.i + 2) as usize] = reg_value % 10;
                 reg_value /= 10;
-                self.memory[(self.i + 0) as usize] = reg_value % 10;
+                self.memory[(self.i + 1) as usize] = reg_value % 10;
                 reg_value /= 10;
                 self.memory[(self.i + 0) as usize] = reg_value % 10;
             },
@@ -222,7 +227,8 @@ impl Chip8 {
 
                 /* TODO : this should be made configurable as the original CHIP-8 interpreter incremented the I register
                  * while executing the instruction; more moderns ROMs do not expect this */
-                for reg_i in 0..reg_max {
+                /* The range uses reg_max + 1 since reg_max must be included */
+                for reg_i in 0..(reg_max + 1) {
                     self.memory[(self.i + reg_i) as usize] = self.regs[reg_i as usize];
                 }
             },
@@ -232,7 +238,9 @@ impl Chip8 {
 
                 /* TODO : this should be made configurable as the original CHIP-8 interpreter incremented the I register
                  * while executing the instruction; more moderns ROMs do not expect this */
-                for reg_i in 0..reg_max {
+                /* The range uses reg_max + 1 since reg_max must be included */
+                for reg_i in 0..(reg_max + 1) {
+                    self.logger.log(format!("Loading memory, setting: V{} to {}", reg_i, self.memory[(self.i + reg_i) as usize]));
                     self.regs[reg_i as usize] = self.memory[(self.i + reg_i) as usize];
                 }
             },
@@ -295,7 +303,7 @@ impl Chip8 {
 
                 /* TODO: this should be made optional, since some implementation (like CHIP-48 or SUPER-CHIP)
                  * did not apply this instruction */
-                self.regs[reg_x as usize] = self.regs[reg_y as usize];
+                //self.regs[reg_x as usize] = self.regs[reg_y as usize];
 
                 /* Set the flag register to 1 if the shifted bit was 1 */
                 if (self.regs[reg_x as usize] & 0x01) == 0x01 {
@@ -325,16 +333,16 @@ impl Chip8 {
 
                 /* TODO: this should be made optional, since some implementation (like CHIP-48 or SUPER-CHIP)
                  * did not apply this instruction */
-                 self.regs[reg_x as usize] = self.regs[reg_y as usize];
+                //self.regs[reg_x as usize] = self.regs[reg_y as usize];
 
                  /* Set the flag register to 1 if the shifted bit was 1 */
-                 if (self.regs[reg_x as usize] & 0x01) == 0x01 {
-                     self.regs[0x0F as usize] = 1;
-                 } else {
-                     self.regs[0x0F as usize] = 0;
-                 }
+                if (self.regs[reg_x as usize] & 0x80) == 0x80 {
+                    self.regs[0x0F as usize] = 1;
+                } else {
+                    self.regs[0x0F as usize] = 0;
+                }
  
-                 self.regs[reg_x as usize] = self.regs[reg_x as usize] << 1;
+                self.regs[reg_x as usize] = self.regs[reg_x as usize] << 1;
             },
             _ => {
                 panic!("Unknown logical instruction found: {:X?}", instr);
