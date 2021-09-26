@@ -83,6 +83,8 @@ impl Chip8 {
     fn execute(&mut self, instr: u16) {
         match instr & 0xF000 {
             0x0000 => {
+                /* A 0NNN instruction exists to execute nativa 1802 machine code in the COSMAC VIP; it
+                 * has not been implemented */
                 if instr == 0x00E0 {
                     /* 00E0: clear screen instruction, turn all pixels off */
                     self.display.clear_screen(false);
