@@ -2,6 +2,7 @@
 use crate::display::Display;
 use crate::display::NCursesDisplay;
 use crate::fonts::Fonts;
+use crate::fonts::FONT_SIZE;
 use crate::logger::FileLogger;
 use crate::logger::Logger;
 
@@ -205,6 +206,30 @@ impl Chip8 {
 
     fn f_instruction(&mut self, instr: u16) {
         match instr & 0xF0FF {
+            0xF01E => {
+                /* FX1E: add to index; add the content of VX to the index, checking for overflows */
+                let reg = (instr & 0x0F00) >> 8;
+                let reg_value = self.regs[reg as usize];
+
+                let mut temp_add = self.i as u32;
+                temp_add += reg_value as u32;
+
+                /* The original interpreter doesn't seem to need the overflow check and flag register set, but it seems
+                 * the Amiga interpreter for CHIP-8 did, so let's check it here */
+                if temp_add > 0xFFFF {
+                    self.regs[0x0F as usize] = 1;
+                } else {
+                    self.regs[0x0F as usize] = 0;
+                }
+
+                self.i = (temp_add & 0x0000FFFF) as u16;
+            },
+            0xF029 => {
+                /* FX29: font character; set I to the address of the "char" contained in VX */
+                let reg = (instr & 0x0F00) >> 8;
+                let reg_value = self.regs[reg as usize];
+                self.i = FONT_START + ((FONT_SIZE as u16) * (reg_value as u16));
+            },
             0xF033 => {
                 /* FX33: binary-coded decimal conversion; take the value of VX and convert it in 3 decimal digits */
                 let reg = (instr & 0x0F00) >> 8;
