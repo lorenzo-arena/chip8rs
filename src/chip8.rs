@@ -193,7 +193,49 @@ impl Chip8 {
                 } else {
                     panic!("Unknown keypad skip instruction found: {:X?}", instr);
                 }
+            },
+            0xF000 => {
+                self.f_instruction(instr);
+            },
+            _ => {
+                panic!("Unknown instruction found: {:X?}", instr);
             }
+        }
+    }
+
+    fn f_instruction(&mut self, instr: u16) {
+        match instr & 0xF0FF {
+            0xF033 => {
+                /* FX33: binary-coded decimal conversion; take the value of VX and convert it in 3 decimal digits */
+                let reg = (instr & 0x0F00) >> 8;
+                let mut reg_value = self.regs[reg as usize];
+
+                self.memory[(self.i + 0) as usize] = reg_value % 10;
+                reg_value /= 10;
+                self.memory[(self.i + 0) as usize] = reg_value % 10;
+                reg_value /= 10;
+                self.memory[(self.i + 0) as usize] = reg_value % 10;
+            },
+            0xF055 => {
+                /* FX55: store in memory; save value from V0 to VX to index from I to I * X in memory */
+                let reg_max = (instr & 0x0F00) >> 8;
+
+                /* TODO : this should be made configurable as the original CHIP-8 interpreter incremented the I register
+                 * while executing the instruction; more moderns ROMs do not expect this */
+                for reg_i in 0..reg_max {
+                    self.memory[(self.i + reg_i) as usize] = self.regs[reg_i as usize];
+                }
+            },
+            0xF065 => {
+                /* FX65: load from memory; save value from index I to I * X to V0 to VX  */
+                let reg_max = (instr & 0x0F00) >> 8;
+
+                /* TODO : this should be made configurable as the original CHIP-8 interpreter incremented the I register
+                 * while executing the instruction; more moderns ROMs do not expect this */
+                for reg_i in 0..reg_max {
+                    self.regs[reg_i as usize] = self.memory[(self.i + reg_i) as usize];
+                }
+            },
             _ => {
                 panic!("Unknown instruction found: {:X?}", instr);
             }
