@@ -18,6 +18,7 @@ pub struct NCursesDisplay {
     display_string: String,
 }
 
+/* TODO : implement option for double ratio */
 impl NCursesDisplay {
     pub fn new(x_len: usize, y_len: usize, on: bool) -> NCursesDisplay {
         let mut display_string = String::new();
@@ -26,7 +27,7 @@ impl NCursesDisplay {
         while y < y_len {
             let mut x = 0;
             while x < x_len {
-                display_string.push_str(if on { "#" } else { " " });
+                display_string.push_str(if on { "##" } else { "  " });
                 x += 1;
             }
 
@@ -49,7 +50,7 @@ impl NCursesDisplay {
             Err("Y coordinate is too large")
         } else {
             /* Here 1 is added for the "\n" */
-            Ok(x as usize + (y as usize * ((self.x_len as usize) + 1)))
+            Ok((x * 2) as usize + (y as usize * (((self.x_len * 2) as usize) + 1)))
         }
     }
 }
@@ -80,13 +81,13 @@ impl Display for NCursesDisplay {
     fn led_on(&mut self, x: usize, y: usize) {
         /* TODO : better result management? */
         let pos = self.get_pos(x, y).unwrap();
-        self.display_string.replace_range(pos..(pos + 1), "#");
+        self.display_string.replace_range(pos..(pos + 2), "##");
     }
 
     fn led_off(&mut self, x: usize, y: usize) {
         /* TODO : better result management? */
         let pos = self.get_pos(x, y).unwrap();
-        self.display_string.replace_range(pos..(pos + 1), " ");
+        self.display_string.replace_range(pos..(pos + 2), "  ");
     }
 
     fn clear_screen(&mut self, on: bool) {
@@ -97,7 +98,7 @@ impl Display for NCursesDisplay {
         while y < self.y_len {
             let mut x = 0;
             while x < self.x_len {
-                self.display_string.push_str(if on { "#" } else { " " });
+                self.display_string.push_str(if on { "##" } else { "  " });
                 x += 1;
             }
 
@@ -109,6 +110,7 @@ impl Display for NCursesDisplay {
     fn is_on(&self, x: usize, y: usize) -> bool {
         /* TODO : better result management? */
         let pos = self.get_pos(x, y).unwrap();
+        /* TODO : is this ok even with double X setup? */
         self.display_string.chars().nth(pos).unwrap() == '#'
     }
 }
