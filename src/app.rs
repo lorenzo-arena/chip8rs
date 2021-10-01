@@ -9,6 +9,8 @@ use opengl_graphics::{ GlGraphics, OpenGL };
 use piston::window::WindowSettings;
 
 use std::thread;
+use std::panic;
+use std::process;
 use std::sync::{Arc, Mutex};
 
 use crate::chip8::Chip8;
@@ -80,6 +82,13 @@ impl App {
     }
 
     pub fn run(&mut self, rom_path: String) {
+        /* Set a hook on panic so that panics on the CHIP-8 thread cause the program to exit */
+        let orig_hook = panic::take_hook();
+        panic::set_hook(Box::new(move |panic_info| {
+            orig_hook(panic_info);
+            process::exit(1);
+        }));
+
         let mut events = Events::new(EventSettings::new());
 
         let display = self.display.clone();
