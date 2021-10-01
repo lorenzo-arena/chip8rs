@@ -23,6 +23,7 @@ const LOG_FILE: &str = "chip8rs.log";
 
 /* TODO : restore debug trait */
 /* TODO : use arrays instead of vecs? */
+/* TODO : set option for more verbose logs */
 pub struct Chip8 {
     display: Arc<Mutex<LedsDisplay>>,
     keypad: Arc<Mutex<KeyboardKeypad>>,
@@ -319,7 +320,6 @@ impl Chip8 {
                  * while executing the instruction; more moderns ROMs do not expect this */
                 /* The range uses reg_max + 1 since reg_max must be included */
                 for reg_i in 0..(reg_max + 1) {
-                    self.logger.log(format!("Loading memory, setting: V{} to {}", reg_i, self.memory[(self.i + reg_i) as usize]));
                     self.regs[reg_i as usize] = self.memory[(self.i + reg_i) as usize];
                 }
             },
@@ -446,16 +446,10 @@ impl Chip8 {
 
         let n = (instr & 0x000F) as u8;
 
-        self.logger.log(format!(
-            "Drawing sprite from coordinates {}:{}, size {}",
-            x, y, n
-        ));
-
         for sprite_row in 0..n {
             let y_pos = (y + sprite_row) as usize;
             if y_pos < DISPLAY_HEIGHT {
                 let sprite_data = self.memory[(self.i + (sprite_row as u16)) as usize];
-                self.logger.log(format!("Sprite data: {:X?}", sprite_data));
 
                 for sprite_bit_i in 0..8 {
                     let x_pos = (x + sprite_bit_i) as usize;
@@ -472,8 +466,6 @@ impl Chip8 {
                             /* Set VF to 1 since a led has been changed */
                             self.regs[0x0F as usize] = 1;
                         } else if (bit_value != 0) && !led_status {
-                            self.logger
-                                .log(format!("Turning ON led {}:{}", x_pos, y_pos));
                             self.display.lock().unwrap().led_on(x_pos, y_pos);
                         }
                     } else {
