@@ -528,10 +528,10 @@ impl Chip8 {
             self.execute(instr);
 
             /* TODO : timing can be implemented better; but supposing that the fetch/execution times
-             * are negligible, a 2 ms sleep will make the emulator execute ~500 instruction per seconds.
+             * are negligible, a 1 ms sleep will make the emulator execute ~1000 instruction per seconds.
              * It seems like a standard speed of 700 CHIP-8 instructions per seconds fits well enough for
              * most games. */
-            let millis = time::Duration::from_millis(2);
+            let millis = time::Duration::from_millis(1);
             thread::sleep(millis);
         }
     }
