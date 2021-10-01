@@ -192,15 +192,17 @@ impl Chip8 {
             },
             0xE000 => {
                 if (instr & 0xF0FF) == 0xE09E {
-                    /* EX9E: skip instruction if key X is currenty pressed */
-                    let key = (instr & 0x0F00) >> 8;
+                    /* EX9E: skip instruction if key value from VX is currenty pressed */
+                    let reg = (instr & 0x0F00) >> 8;
+                    let key = self.regs[reg as usize];
 
                     if self.keypad.lock().unwrap().get_is_pressed(key as usize) {
                         self.pc += 2;
                     }
                 } else if (instr & 0xF0FF) == 0xE0A1 {
-                    /* EXA1: skip instruction if key X is NOT currenty pressed */
-                    let key = (instr & 0x0F00) >> 8;
+                    /* EXA1: skip instruction if key value from VX is NOT currenty pressed */
+                    let reg = (instr & 0x0F00) >> 8;
+                    let key = self.regs[reg as usize];
 
                     if ! self.keypad.lock().unwrap().get_is_pressed(key as usize) {
                         self.pc += 2;
