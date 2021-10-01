@@ -8,6 +8,7 @@ use crate::logger::Logger;
 
 use rand::Rng;
 use std::{fs, thread, time};
+use std::sync::{Arc, Mutex};
 
 const MEMORY_SIZE: usize = 4096;
 const STACK_SIZE: usize = 100;
@@ -23,7 +24,7 @@ const LOG_FILE: &str = "chip8rs.log";
 /* TODO : restore debug trait */
 /* TODO : use arrays instead of vecs? */
 pub struct Chip8 {
-    display: LedsDisplay,
+    display: Arc<Mutex<LedsDisplay>>,
     memory: [u8; MEMORY_SIZE],
     pc: u16,
     i: u16,
@@ -36,9 +37,9 @@ pub struct Chip8 {
 }
 
 impl Chip8 {
-    pub fn new() -> Chip8 {
+    pub fn new(display: &Arc<Mutex<LedsDisplay>>) -> Chip8 {
         Chip8 {
-            display: LedsDisplay::new(DISPLAY_WIDTH, DISPLAY_HEIGHT, false),
+            display: Arc::clone(display),
             memory: [0; MEMORY_SIZE],
             pc: 0,
             i: 0,
@@ -87,7 +88,7 @@ impl Chip8 {
                  * has not been implemented */
                 if instr == 0x00E0 {
                     /* 00E0: clear screen instruction, turn all pixels off */
-                    self.display.clear_screen(false);
+                    self.display.lock().unwrap().clear_screen(false);
                 } else if instr == 0x00EE {
                     /* 00EE: return from subroutine, pop the PC */
                     self.pc = self.stack.pop().unwrap();
@@ -406,18 +407,18 @@ impl Chip8 {
                         /* The bits must be read from MIB to LIB */
                         let bit_index = 7 - sprite_bit_i;
                         let bit_value = (sprite_data & (0x1 << bit_index)) >> bit_index;
-                        let led_status = self.display.is_on(x_pos, y_pos);
+                        let led_status = self.display.lock().unwrap().is_on(x_pos, y_pos);
 
                         /* If current pixel is on and bit is high, flip the led */
                         if (bit_value != 0) && led_status {
-                            self.display.led_off(x_pos, y_pos);
+                            self.display.lock().unwrap().led_off(x_pos, y_pos);
 
                             /* Set VF to 1 since a led has been changed */
                             self.regs[0x0F as usize] = 1;
                         } else if (bit_value != 0) && !led_status {
                             self.logger
                                 .log(format!("Turning ON led {}:{}", x_pos, y_pos));
-                            self.display.led_on(x_pos, y_pos);
+                            self.display.lock().unwrap().led_on(x_pos, y_pos);
                         }
                     } else {
                         self.logger.log(format!("X overflow while drawing sprite"));
