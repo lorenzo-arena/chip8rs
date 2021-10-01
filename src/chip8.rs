@@ -398,12 +398,16 @@ impl Chip8 {
                  * in this case, the flag register is set if the first operand is larger than the second operand */
 
                 if self.regs[reg_y as usize] >= self.regs[reg_x as usize] {
-                    self.regs[0x0F as usize] = 1;
                     self.regs[reg_x as usize] = self.regs[reg_y as usize] - self.regs[reg_x as usize];
+
+                    /* Set VF after the operation so that VF can be used in subtractions; this should not break compatibility anyway */
+                    self.regs[0x0F as usize] = 1;
                 } else {
-                    self.regs[0x0F as usize] = 0;
                     /* Since the operation would underflow, let's multiply by -1 by swapping the operands */
                     self.regs[reg_x as usize] = self.regs[reg_x as usize] - self.regs[reg_y as usize];
+
+                    /* Set VF after the operation so that VF can be used in subtractions; this should not break compatibility anyway */
+                    self.regs[0x0F as usize] = 0;
                 }
             },
             0x800E => {
