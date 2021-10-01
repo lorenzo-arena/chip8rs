@@ -1,6 +1,6 @@
 /* TODO : convert display to a trait? */
 use crate::display::Display;
-use crate::display::NCursesDisplay;
+use crate::display::LedsDisplay;
 use crate::fonts::Fonts;
 use crate::fonts::FONT_SIZE;
 use crate::logger::FileLogger;
@@ -23,7 +23,7 @@ const LOG_FILE: &str = "chip8rs.log";
 /* TODO : restore debug trait */
 /* TODO : use arrays instead of vecs? */
 pub struct Chip8 {
-    display: NCursesDisplay,
+    display: LedsDisplay,
     memory: [u8; MEMORY_SIZE],
     pc: u16,
     i: u16,
@@ -38,7 +38,7 @@ pub struct Chip8 {
 impl Chip8 {
     pub fn new() -> Chip8 {
         Chip8 {
-            display: NCursesDisplay::new(DISPLAY_WIDTH, DISPLAY_HEIGHT, false),
+            display: LedsDisplay::new(DISPLAY_WIDTH, DISPLAY_HEIGHT, false),
             memory: [0; MEMORY_SIZE],
             pc: 0,
             i: 0,
@@ -88,7 +88,6 @@ impl Chip8 {
                 if instr == 0x00E0 {
                     /* 00E0: clear screen instruction, turn all pixels off */
                     self.display.clear_screen(false);
-                    self.display.refresh();
                 } else if instr == 0x00EE {
                     /* 00EE: return from subroutine, pop the PC */
                     self.pc = self.stack.pop().unwrap();
@@ -412,7 +411,6 @@ impl Chip8 {
                         /* If current pixel is on and bit is high, flip the led */
                         if (bit_value != 0) && led_status {
                             self.display.led_off(x_pos, y_pos);
-                            self.display.refresh();
 
                             /* Set VF to 1 since a led has been changed */
                             self.regs[0x0F as usize] = 1;
@@ -420,7 +418,6 @@ impl Chip8 {
                             self.logger
                                 .log(format!("Turning ON led {}:{}", x_pos, y_pos));
                             self.display.led_on(x_pos, y_pos);
-                            self.display.refresh();
                         }
                     } else {
                         self.logger.log(format!("X overflow while drawing sprite"));
@@ -438,8 +435,6 @@ impl Chip8 {
 
         self.pc = ROM_START;
 
-        self.display.open();
-
         loop {
             let instr = self.fetch();
             self.execute(instr);
@@ -451,7 +446,5 @@ impl Chip8 {
             let millis = time::Duration::from_millis(2);
             thread::sleep(millis);
         }
-
-        self.display.close();
     }
 }
