@@ -10,5 +10,11 @@ To build and test the projects, run:
 
 ```bash
 $ cargo build
-$ cargo run
+$ cargo run -- --rom /path/to/rom.ch8
+```
+
+For more informations about available options, run:
+
+```bash
+$ cargo run -- --help
 ```
