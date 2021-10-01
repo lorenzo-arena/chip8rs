@@ -226,6 +226,26 @@ impl Chip8 {
                 let timer = self.delay_timer.lock().unwrap();
                 self.regs[reg as usize] = *timer;
             },
+            0xF00A => {
+                /* FX0A: wait for a key press and set its value to VX */
+                let reg = (instr & 0x0F00) >> 8;
+                let keypad = self.keypad.lock().unwrap();
+                let mut key = 0;
+
+                while key < 0x10 {
+                    if keypad.get_is_pressed(key as usize) {
+                        self.regs[reg as usize] = key;
+                        break;
+                    } else {
+                        key += 1;
+                    }
+                }
+
+                /* If not key was pressed, decrement the PC so that this instruction is executed again */
+                if key >= 0x10 {
+                    self.pc -= 2;
+                }
+            },
             0xF015 => {
                 /* FX15: set timer; set the delay timer to the value in VX */
                 let reg = (instr & 0x0F00) >> 8;
