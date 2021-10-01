@@ -1,5 +1,6 @@
 mod chip8;
 mod display;
+mod keypad;
 mod fonts;
 mod logger;
 mod app;

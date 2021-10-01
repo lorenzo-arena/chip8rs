@@ -1,6 +1,5 @@
-/* TODO : convert display to a trait? */
-use crate::display::Display;
-use crate::display::LedsDisplay;
+use crate::display::*;
+use crate::keypad::*;
 use crate::fonts::Fonts;
 use crate::fonts::FONT_SIZE;
 use crate::logger::FileLogger;
@@ -16,6 +15,7 @@ const REGISTERS_SIZE: usize = 16;
 const FONT_START: u16 = 0x50;
 const ROM_START: u16 = 0x200;
 
+/* TODO : add getters from real display struct */
 const DISPLAY_WIDTH: usize = 64;
 const DISPLAY_HEIGHT: usize = 32;
 
@@ -25,6 +25,7 @@ const LOG_FILE: &str = "chip8rs.log";
 /* TODO : use arrays instead of vecs? */
 pub struct Chip8 {
     display: Arc<Mutex<LedsDisplay>>,
+    keypad: Arc<Mutex<KeyboardKeypad>>,
     memory: [u8; MEMORY_SIZE],
     pc: u16,
     i: u16,
@@ -37,9 +38,10 @@ pub struct Chip8 {
 }
 
 impl Chip8 {
-    pub fn new(display: &Arc<Mutex<LedsDisplay>>) -> Chip8 {
+    pub fn new(display: &Arc<Mutex<LedsDisplay>>, keypad: &Arc<Mutex<KeyboardKeypad>>) -> Chip8 {
         Chip8 {
             display: Arc::clone(display),
+            keypad: Arc::clone(keypad),
             memory: [0; MEMORY_SIZE],
             pc: 0,
             i: 0,
@@ -190,9 +192,19 @@ impl Chip8 {
             },
             0xE000 => {
                 if (instr & 0xF0FF) == 0xE09E {
-                    panic!("Unknown keypad skip instruction found: {:X?}", instr);
+                    /* EX9E: skip instruction if key X is currenty pressed */
+                    let key = (instr & 0x0F00) >> 8;
+
+                    if self.keypad.lock().unwrap().get_is_pressed(key as usize) {
+                        self.pc += 2;
+                    }
                 } else if (instr & 0xF0FF) == 0xE0A1 {
-                    panic!("Unknown keypad skip instruction found: {:X?}", instr);
+                    /* EXA1: skip instruction if key X is NOT currenty pressed */
+                    let key = (instr & 0x0F00) >> 8;
+
+                    if ! self.keypad.lock().unwrap().get_is_pressed(key as usize) {
+                        self.pc += 2;
+                    }
                 } else {
                     panic!("Unknown keypad skip instruction found: {:X?}", instr);
                 }

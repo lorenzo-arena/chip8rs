@@ -11,7 +11,6 @@ pub struct LedsDisplay {
     leds: Vec<Vec<bool>>,
 }
 
-/* TODO : implement option for double ratio */
 impl LedsDisplay {
     pub fn new(x_len: usize, y_len: usize, on: bool) -> LedsDisplay {
         LedsDisplay {

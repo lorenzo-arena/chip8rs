@@ -13,6 +13,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::chip8::Chip8;
 use crate::display::*;
+use crate::keypad::*;
 
 const WINDOW_WIDTH: usize = 640;
 const WINDOW_HEIGHT: usize = 320;
@@ -22,8 +23,11 @@ const DISPLAY_HEIGHT: usize = 32;
 
 const LED_WIDTH: f64 = 10.0;
 
+const KEYPAD_SIZE: usize = 0x10;
+
 pub struct App {
     display: Arc<Mutex<LedsDisplay>>,
+    keypad: Arc<Mutex<KeyboardKeypad>>,
     window: glutin_window::GlutinWindow,
     gl: GlGraphics,
     color: [f32; 4],
@@ -36,6 +40,7 @@ impl App {
 
         App {
             display: Arc::new(Mutex::new(LedsDisplay::new(DISPLAY_WIDTH, DISPLAY_HEIGHT, false))),
+            keypad: Arc::new(Mutex::new(KeyboardKeypad::new(KEYPAD_SIZE))),
             window: WindowSettings::new(
                 "CHIP-8 RS",
                 [WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32]
@@ -78,15 +83,64 @@ impl App {
         let mut events = Events::new(EventSettings::new());
 
         let display = self.display.clone();
+        let keypad = self.keypad.clone();
 
         thread::spawn(move|| {
-            let mut chip = Chip8::new(&display);
+            let mut chip = Chip8::new(&display, &keypad);
             chip.run(&rom_path);
         });
 
         while let Some(e) = events.next(&mut self.window) {
             if let Some(r) = e.render_args() {
                 self.render(&r);
+            }
+
+            if let Some(Button::Keyboard(key)) = e.press_args() {
+                match key {
+                    /* TODO : add ASCII art for keypad */
+                    /* TODO : move this logic in the keypad struct */
+                    Key::D1 => self.keypad.lock().unwrap().set_is_pressed(0x01, true),
+                    Key::D2 => self.keypad.lock().unwrap().set_is_pressed(0x02, true),
+                    Key::D3 => self.keypad.lock().unwrap().set_is_pressed(0x03, true),
+                    Key::D4 => self.keypad.lock().unwrap().set_is_pressed(0x0C, true),
+                    Key::Q => self.keypad.lock().unwrap().set_is_pressed(0x04, true),
+                    Key::W => self.keypad.lock().unwrap().set_is_pressed(0x05, true),
+                    Key::E => self.keypad.lock().unwrap().set_is_pressed(0x06, true),
+                    Key::R => self.keypad.lock().unwrap().set_is_pressed(0x0D, true),
+                    Key::A => self.keypad.lock().unwrap().set_is_pressed(0x07, true),
+                    Key::S => self.keypad.lock().unwrap().set_is_pressed(0x08, true),
+                    Key::D => self.keypad.lock().unwrap().set_is_pressed(0x09, true),
+                    Key::F => self.keypad.lock().unwrap().set_is_pressed(0x0E, true),
+                    Key::Z => self.keypad.lock().unwrap().set_is_pressed(0x0A, true),
+                    Key::X => self.keypad.lock().unwrap().set_is_pressed(0x00, true),
+                    Key::C => self.keypad.lock().unwrap().set_is_pressed(0x0B, true),
+                    Key::V => self.keypad.lock().unwrap().set_is_pressed(0x0F, true),
+                    _ => {}
+                }
+            }
+    
+            if let Some(Button::Keyboard(key)) = e.release_args() {
+                match key {
+                    /* TODO : add ASCII art for keypad */
+                    /* TODO : move this logic in the keypad struct */
+                    Key::D1 => self.keypad.lock().unwrap().set_is_pressed(0x01, true),
+                    Key::D2 => self.keypad.lock().unwrap().set_is_pressed(0x02, true),
+                    Key::D3 => self.keypad.lock().unwrap().set_is_pressed(0x03, true),
+                    Key::D4 => self.keypad.lock().unwrap().set_is_pressed(0x0C, true),
+                    Key::Q => self.keypad.lock().unwrap().set_is_pressed(0x04, true),
+                    Key::W => self.keypad.lock().unwrap().set_is_pressed(0x05, true),
+                    Key::E => self.keypad.lock().unwrap().set_is_pressed(0x06, true),
+                    Key::R => self.keypad.lock().unwrap().set_is_pressed(0x0D, true),
+                    Key::A => self.keypad.lock().unwrap().set_is_pressed(0x07, true),
+                    Key::S => self.keypad.lock().unwrap().set_is_pressed(0x08, true),
+                    Key::D => self.keypad.lock().unwrap().set_is_pressed(0x09, true),
+                    Key::F => self.keypad.lock().unwrap().set_is_pressed(0x0E, true),
+                    Key::Z => self.keypad.lock().unwrap().set_is_pressed(0x0A, true),
+                    Key::X => self.keypad.lock().unwrap().set_is_pressed(0x00, true),
+                    Key::C => self.keypad.lock().unwrap().set_is_pressed(0x0B, true),
+                    Key::V => self.keypad.lock().unwrap().set_is_pressed(0x0F, true),
+                    _ => {}
+                }
             }
         }
     }
