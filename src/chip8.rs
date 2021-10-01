@@ -30,8 +30,8 @@ pub struct Chip8 {
     pc: u16,
     i: u16,
     stack: Vec<u16>,
-    delay_timer: u8,
-    sound_timer: u8,
+    delay_timer: Arc<Mutex<u8>>,
+    sound_timer: Arc<Mutex<u8>>,
     regs: [u8; REGISTERS_SIZE],
     fonts: Fonts,
     logger: FileLogger,
@@ -46,8 +46,8 @@ impl Chip8 {
             pc: 0,
             i: 0,
             stack: vec![0; STACK_SIZE],
-            delay_timer: 0,
-            sound_timer: 0,
+            delay_timer: Arc::new(Mutex::new(0)),
+            sound_timer: Arc::new(Mutex::new(0)),
             regs: [0; REGISTERS_SIZE],
             fonts: Fonts::new(),
             logger: FileLogger::new(LOG_FILE.to_string()),
@@ -220,6 +220,24 @@ impl Chip8 {
 
     fn f_instruction(&mut self, instr: u16) {
         match instr & 0xF0FF {
+            0xF007 => {
+                /* FX07: copy timer; set VX to the current value of the delay timer */
+                let reg = (instr & 0x0F00) >> 8;
+                let timer = self.delay_timer.lock().unwrap();
+                self.regs[reg as usize] = *timer;
+            },
+            0xF015 => {
+                /* FX15: set timer; set the delay timer to the value in VX */
+                let reg = (instr & 0x0F00) >> 8;
+                let mut timer = self.delay_timer.lock().unwrap();
+                *timer = self.regs[reg as usize];
+            },
+            0xF018 => {
+                /* FX18: set timer; set the sound timer to the value in VX */
+                let reg = (instr & 0x0F00) >> 8;
+                let mut timer = self.sound_timer.lock().unwrap();
+                *timer = self.regs[reg as usize];
+            },
             0xF01E => {
                 /* FX1E: add to index; add the content of VX to the index, checking for overflows */
                 let reg = (instr & 0x0F00) >> 8;
@@ -442,9 +460,40 @@ impl Chip8 {
         }
     }
 
+    fn start_timers(&self) {
+        let delay_timer = self.delay_timer.clone();
+
+        thread::spawn(move|| {
+            loop {
+                /* Cycle at ~60Hz */
+                let millis = time::Duration::from_millis(16);
+                thread::sleep(millis);
+                let mut timer = delay_timer.lock().unwrap();
+                if *timer > 0 {
+                    *timer -= 1;
+                }
+            }
+        });
+
+        let sound_timer = self.sound_timer.clone();
+
+        thread::spawn(move|| {
+            loop {
+                /* Cycle at ~60Hz */
+                let millis = time::Duration::from_millis(16);
+                thread::sleep(millis);
+                let mut timer = sound_timer.lock().unwrap();
+                if *timer > 0 {
+                    *timer -= 1;
+                }
+            }
+        });
+    }
+
     pub fn run(&mut self, rom_path: &str) {
         self.load_fonts();
         self.load_rom(rom_path);
+        self.start_timers();
 
         self.pc = ROM_START;
 
