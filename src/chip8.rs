@@ -9,6 +9,10 @@ use rand::Rng;
 use std::{fs, thread, time};
 use std::sync::{Arc, Mutex};
 
+use rodio::{OutputStream};
+use rodio::source::{SineWave, Source};
+
+
 const MEMORY_SIZE: usize = 4096;
 const STACK_SIZE: usize = 100;
 const REGISTERS_SIZE: usize = 16;
@@ -260,7 +264,6 @@ impl Chip8 {
                 let reg = (instr & 0x0F00) >> 8;
                 let mut timer = self.sound_timer.lock().unwrap();
                 *timer = self.regs[reg as usize];
-                self.logger.log(format!("Loading sound timer to {} *********************", *timer));
             },
             0xF01E => {
                 /* FX1E: add to index; add the content of VX to the index, checking for overflows */
@@ -497,13 +500,27 @@ impl Chip8 {
         let sound_timer = self.sound_timer.clone();
 
         thread::spawn(move|| {
+            /* Create the stream handle here so that it doesn't go out of scope after playing a sound */
+            let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+            /* Save the value with which the timer was loaded; play a tune only when is loaded with a higher value */
+            let mut playing_timer = 0;
+
             loop {
                 /* Cycle at ~60Hz */
                 let millis = time::Duration::from_millis(16);
                 thread::sleep(millis);
                 let mut timer = sound_timer.lock().unwrap();
+
+                if *timer > 0 && *timer > playing_timer {
+                    playing_timer = *timer;
+                    let source = SineWave::new(440).take_duration(time::Duration::from_millis((playing_timer as u64) * 16)).amplify(1.0);
+                    stream_handle.play_raw(source).unwrap();
+                }
+
                 if *timer > 0 {
                     *timer -= 1;
+                } else if *timer == 0 {
+                    playing_timer = 0;
                 }
             }
         });
