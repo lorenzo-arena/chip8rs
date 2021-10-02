@@ -260,6 +260,7 @@ impl Chip8 {
                 let reg = (instr & 0x0F00) >> 8;
                 let mut timer = self.sound_timer.lock().unwrap();
                 *timer = self.regs[reg as usize];
+                self.logger.log(format!("Loading sound timer to {} *********************", *timer));
             },
             0xF01E => {
                 /* FX1E: add to index; add the content of VX to the index, checking for overflows */
@@ -520,9 +521,9 @@ impl Chip8 {
             self.execute(instr);
 
             /* TODO : timing can be implemented better; but supposing that the fetch/execution times
-             * are negligible, a 1429ns sleep will make the emulator execute ~700 instruction per seconds,
+             * are negligible, a 1429us sleep will make the emulator execute ~700 instruction per seconds,
              * which seems like a speed which fits well enough for most games */
-            let millis = time::Duration::from_nanos(1429);
+            let millis = time::Duration::from_micros(1429);
             thread::sleep(millis);
         }
     }
