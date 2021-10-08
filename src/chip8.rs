@@ -371,13 +371,13 @@ impl Chip8 {
                 /* 8XY5: SUBTRACT, VX is set to the value of VX minus VY;
                  * in this case, the flag register is set if the first operand is larger than the second operand */
 
-                if self.regs[reg_x as usize] >= self.regs[reg_y as usize] {
+                if self.regs[reg_x as usize] > self.regs[reg_y as usize] {
                     self.regs[0x0F as usize] = 1;
                     self.regs[reg_x as usize] = self.regs[reg_x as usize] - self.regs[reg_y as usize];
                 } else {
                     self.regs[0x0F as usize] = 0;
-                    /* Since the operation would underflow, let's multiply by -1 by swapping the operands */
-                    self.regs[reg_x as usize] = self.regs[reg_y as usize] - self.regs[reg_x as usize];
+                    /* From the specification, this instruction should result in the rolling of the uint */
+                    self.regs[reg_x as usize] = ((0x100 - (self.regs[reg_y as usize] as u16) + (self.regs[reg_x as usize] as u16)) & 0xFF) as u8;
                 }
             },
             0x8006 => {
