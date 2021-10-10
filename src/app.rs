@@ -16,6 +16,7 @@ use std::sync::{Arc, Mutex};
 use crate::chip8::Chip8;
 use crate::display::*;
 use crate::keypad::*;
+use crate::hsl::*;
 
 const WINDOW_WIDTH: usize = 640;
 const WINDOW_HEIGHT: usize = 320;
@@ -32,13 +33,28 @@ pub struct App {
     keypad: Arc<Mutex<KeyboardKeypad>>,
     window: glutin_window::GlutinWindow,
     gl: GlGraphics,
-    color: [f32; 4],
+    color: RGBPixel,
     background: [f32; 4],
+    nyan_mode: bool,
 }
 
 impl App {
-    pub fn new() -> App {
+    pub fn new(nyan_mode: bool) -> App {
         let opengl = OpenGL::V3_2;
+
+        let mut starting_color = RGBPixel {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
+
+        if nyan_mode {
+            starting_color = RGBPixel {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+            };
+        }
 
         App {
             display: Arc::new(Mutex::new(LedsDisplay::new(DISPLAY_WIDTH, DISPLAY_HEIGHT, false))),
@@ -52,19 +68,33 @@ impl App {
             .build()
             .unwrap(),
             gl: GlGraphics::new(opengl),
-            color: [0.0, 0.0, 0.0, 1.0],
+            color: starting_color,
             background: [1.0, 1.0, 1.0, 1.0],
+            nyan_mode: nyan_mode
         }
     }
 
     pub fn render(&mut self, args: &RenderArgs) {
         use graphics::*;
         let background = self.background;
+
+        if self.nyan_mode {
+            let mut hsl = rgb_to_hsl(&self.color);
+
+            if hsl.h >= 360 {
+                hsl.h = 1;
+            } else {
+                hsl.h += 1;
+            }
+
+            self.color = hsl_to_rgb(&hsl);
+        }
+
         let color = self.color;
         let display = self.display.clone();
 
         self.gl.draw(args.viewport(), |c, gl| {
-            // Clear the screen.
+            /* Clear the screen. */
             clear(background, gl);
 
             for y in 0..DISPLAY_HEIGHT {
@@ -74,7 +104,7 @@ impl App {
 
                         /* TODO : empty transformation; is there a way to skip this? */
                         let transform = c.transform.trans(0.0, 0.0);
-                        rectangle(color, square, transform, gl);
+                        rectangle([color.r, color.g, color.b, 1.0], square, transform, gl);
                     }
                 }
             }

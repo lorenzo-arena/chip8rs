@@ -4,6 +4,7 @@ mod keypad;
 mod fonts;
 mod logger;
 mod app;
+mod hsl;
 
 use clap;
 
@@ -21,10 +22,15 @@ fn main() {
                                   .help("Path to the CHIP-8 ROM file")
                                   .required(true)
                                   .takes_value(true))
+                             .arg(clap::Arg::with_name("nyan")
+                                  .long("nyan")
+                                  .help("Enter \"Nyan Cat\" mode")
+                                  .takes_value(false))
                              .get_matches();
 
     let rom_path = matches.value_of("rom").unwrap();
+    let nyan_mode = matches.is_present("nyan");
 
-    let mut app = App::new();
+    let mut app = App::new(nyan_mode);
     app.run(rom_path.to_string());
 }
