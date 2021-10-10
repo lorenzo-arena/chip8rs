@@ -1,22 +1,22 @@
-extern crate piston;
-extern crate graphics;
 extern crate glutin_window;
+extern crate graphics;
 extern crate opengl_graphics;
+extern crate piston;
 
-use piston::input::*;
+use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::*;
-use opengl_graphics::{ GlGraphics, OpenGL };
+use piston::input::*;
 use piston::window::WindowSettings;
 
-use std::thread;
 use std::panic;
 use std::process;
 use std::sync::{Arc, Mutex};
+use std::thread;
 
 use crate::chip8::Chip8;
 use crate::display::*;
-use crate::keypad::*;
 use crate::hsl::*;
+use crate::keypad::*;
 
 const WINDOW_WIDTH: usize = 640;
 const WINDOW_HEIGHT: usize = 320;
@@ -57,20 +57,21 @@ impl App {
         }
 
         App {
-            display: Arc::new(Mutex::new(LedsDisplay::new(DISPLAY_WIDTH, DISPLAY_HEIGHT, false))),
+            display: Arc::new(Mutex::new(LedsDisplay::new(
+                DISPLAY_WIDTH,
+                DISPLAY_HEIGHT,
+                false,
+            ))),
             keypad: Arc::new(Mutex::new(KeyboardKeypad::new(KEYPAD_SIZE))),
-            window: WindowSettings::new(
-                "CHIP-8 RS",
-                [WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32]
-            )
-            .opengl(opengl)
-            .exit_on_esc(true)
-            .build()
-            .unwrap(),
+            window: WindowSettings::new("CHIP-8 RS", [WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32])
+                .opengl(opengl)
+                .exit_on_esc(true)
+                .build()
+                .unwrap(),
             gl: GlGraphics::new(opengl),
             color: starting_color,
             background: [1.0, 1.0, 1.0, 1.0],
-            nyan_mode: nyan_mode
+            nyan_mode: nyan_mode,
         }
     }
 
@@ -100,7 +101,11 @@ impl App {
             for y in 0..DISPLAY_HEIGHT {
                 for x in 0..DISPLAY_WIDTH {
                     if display.lock().unwrap().is_on(x, y) {
-                        let square = rectangle::square((x as f64) * LED_WIDTH, (y as f64) * LED_WIDTH, LED_WIDTH);
+                        let square = rectangle::square(
+                            (x as f64) * LED_WIDTH,
+                            (y as f64) * LED_WIDTH,
+                            LED_WIDTH,
+                        );
 
                         /* TODO : empty transformation; is there a way to skip this? */
                         let transform = c.transform.trans(0.0, 0.0);
@@ -124,7 +129,7 @@ impl App {
         let display = self.display.clone();
         let keypad = self.keypad.clone();
 
-        thread::spawn(move|| {
+        thread::spawn(move || {
             let mut chip = Chip8::new(&display, &keypad);
             chip.run(&rom_path);
         });
@@ -157,7 +162,7 @@ impl App {
                     _ => {}
                 }
             }
-    
+
             if let Some(Button::Keyboard(key)) = e.release_args() {
                 match key {
                     /* TODO : add ASCII art for keypad */

@@ -4,13 +4,13 @@ pub trait Keypad {
 }
 
 pub struct KeyboardKeypad {
-    keys: Vec<bool>
+    keys: Vec<bool>,
 }
 
 impl KeyboardKeypad {
     pub fn new(codes: usize) -> KeyboardKeypad {
         KeyboardKeypad {
-            keys: vec![false; codes]
+            keys: vec![false; codes],
         }
     }
 }

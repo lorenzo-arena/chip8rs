@@ -11,7 +11,7 @@ pub struct RGBPixel {
 pub struct HSLPixel {
     pub h: i32,
     pub s: f32,
-    pub l: f32
+    pub l: f32,
 }
 
 fn get_min(a: f32, b: f32) -> f32 {
@@ -137,11 +137,66 @@ mod tests {
     use assert_approx_eq::assert_approx_eq;
 
     const PIXELS: [(RGBPixel, HSLPixel); 5] = [
-        (RGBPixel {r: 1.0, g: 0.0, b: 0.0}, HSLPixel {h: 0, s: 1.0, l: 0.5}),
-        (RGBPixel {r: 0.0, g: 1.0, b: 0.0}, HSLPixel {h: 120, s: 1.0, l: 0.5}),
-        (RGBPixel {r: 0.0, g: 0.0, b: 1.0}, HSLPixel {h: 240, s: 1.0, l: 0.5}),
-        (RGBPixel {r: 0.0, g: 1.0, b: 1.0}, HSLPixel {h: 180, s: 1.0, l: 0.5}),
-        (RGBPixel {r: 0.25, g: 0.875, b: 0.8125}, HSLPixel {h: 174, s: 0.71428573, l: 0.5625}),
+        (
+            RGBPixel {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+            },
+            HSLPixel {
+                h: 0,
+                s: 1.0,
+                l: 0.5,
+            },
+        ),
+        (
+            RGBPixel {
+                r: 0.0,
+                g: 1.0,
+                b: 0.0,
+            },
+            HSLPixel {
+                h: 120,
+                s: 1.0,
+                l: 0.5,
+            },
+        ),
+        (
+            RGBPixel {
+                r: 0.0,
+                g: 0.0,
+                b: 1.0,
+            },
+            HSLPixel {
+                h: 240,
+                s: 1.0,
+                l: 0.5,
+            },
+        ),
+        (
+            RGBPixel {
+                r: 0.0,
+                g: 1.0,
+                b: 1.0,
+            },
+            HSLPixel {
+                h: 180,
+                s: 1.0,
+                l: 0.5,
+            },
+        ),
+        (
+            RGBPixel {
+                r: 0.25,
+                g: 0.875,
+                b: 0.8125,
+            },
+            HSLPixel {
+                h: 174,
+                s: 0.71428573,
+                l: 0.5625,
+            },
+        ),
     ];
 
     #[test]
