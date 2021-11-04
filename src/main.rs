@@ -5,6 +5,7 @@ mod fonts;
 mod hsl;
 mod keypad;
 mod logger;
+mod instruction;
 
 use clap;
 
