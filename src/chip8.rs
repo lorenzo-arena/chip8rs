@@ -5,13 +5,11 @@ use crate::keypad::*;
 use crate::logger::FileLogger;
 use crate::logger::Logger;
 use crate::instruction::Instruction;
+use crate::timer::{Timer, DelayTimer, SoundTimer};
 
 use rand::Rng;
 use std::sync::{Arc, Mutex};
 use std::{fs, thread, time};
-
-use rodio::source::{SineWave, Source};
-use rodio::OutputStream;
 
 const MEMORY_SIZE: usize = 4096;
 const STACK_SIZE: usize = 100;
@@ -35,8 +33,8 @@ pub struct Chip8 {
     pc: u16,
     i: u16,
     stack: Vec<u16>,
-    delay_timer: Arc<Mutex<u8>>,
-    sound_timer: Arc<Mutex<u8>>,
+    delay_timer: DelayTimer,
+    sound_timer: SoundTimer,
     regs: [u8; REGISTERS_SIZE],
     fonts: Fonts,
     logger: FileLogger,
@@ -51,8 +49,8 @@ impl Chip8 {
             pc: 0,
             i: 0,
             stack: vec![0; STACK_SIZE],
-            delay_timer: Arc::new(Mutex::new(0)),
-            sound_timer: Arc::new(Mutex::new(0)),
+            delay_timer: DelayTimer::new(),
+            sound_timer: SoundTimer::new(),
             regs: [0; REGISTERS_SIZE],
             fonts: Fonts::new(),
             logger: FileLogger::new(LOG_FILE.to_string()),
@@ -305,8 +303,7 @@ impl Chip8 {
     }
 
     fn copy_delay_timer(&mut self, reg: u8) {
-        let timer = self.delay_timer.lock().unwrap();
-        self.regs[reg as usize] = *timer;
+        self.regs[reg as usize] = self.delay_timer.get_timer_value();
     }
 
     fn wait_for_key(&mut self, reg: u8) {
@@ -329,13 +326,11 @@ impl Chip8 {
     }
 
     fn set_delay_timer(&mut self, reg: u8) {
-        let mut timer = self.delay_timer.lock().unwrap();
-        *timer = self.regs[reg as usize];
+        self.delay_timer.set_timer_value(self.regs[reg as usize]);
     }
 
     fn set_sound_timer(&mut self, reg: u8) {
-        let mut timer = self.sound_timer.lock().unwrap();
-        *timer = self.regs[reg as usize];
+        self.sound_timer.set_timer_value(self.regs[reg as usize]);
     }
 
     fn add_to_index(&mut self, reg: u8) {
@@ -432,56 +427,12 @@ impl Chip8 {
         }
     }
 
-    fn start_timers(&self) {
-        let delay_timer = self.delay_timer.clone();
-
-        thread::spawn(move || {
-            loop {
-                /* Cycle at ~60Hz */
-                let millis = time::Duration::from_millis(16);
-                thread::sleep(millis);
-                let mut timer = delay_timer.lock().unwrap();
-                if *timer > 0 {
-                    *timer -= 1;
-                }
-            }
-        });
-
-        let sound_timer = self.sound_timer.clone();
-
-        thread::spawn(move || {
-            /* Create the stream handle here so that it doesn't go out of scope after playing a sound */
-            let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-            /* Save the value with which the timer was loaded; play a tune only when is loaded with a higher value */
-            let mut playing_timer = 0;
-
-            loop {
-                /* Cycle at ~60Hz */
-                let millis = time::Duration::from_millis(16);
-                thread::sleep(millis);
-                let mut timer = sound_timer.lock().unwrap();
-
-                if *timer > 0 && *timer > playing_timer {
-                    playing_timer = *timer;
-                    let source = SineWave::new(440)
-                        .take_duration(time::Duration::from_millis((playing_timer as u64) * 16))
-                        .amplify(1.0);
-                    stream_handle.play_raw(source).unwrap();
-                }
-
-                if *timer > 0 {
-                    *timer -= 1;
-                } else if *timer == 0 {
-                    playing_timer = 0;
-                }
-            }
-        });
-    }
-
     pub fn run(&mut self, rom_path: &str) {
         self.load_fonts();
         self.load_rom(rom_path);
-        self.start_timers();
+
+        self.delay_timer.start(60.0);
+        self.sound_timer.start(60.0);
 
         self.pc = ROM_START;
 

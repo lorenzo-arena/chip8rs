@@ -6,6 +6,7 @@ mod hsl;
 mod keypad;
 mod logger;
 mod instruction;
+mod timer;
 
 use clap;
 
